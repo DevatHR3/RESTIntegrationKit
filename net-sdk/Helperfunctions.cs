@@ -107,7 +107,6 @@ namespace HR3Weblinks.Examples
             // Initial token provided for General Access.   - this can be a provided key as well. 
             // The user can use a cmkey or a provided Key to login initially, typically a general access key.  (systemsetting windows gen'd one can work as well.)
 
-            //string lscmkey = "{9C638998-D441-478C-97BB-049794709CE1}";
             string lsNonce = "";
             string lsResult = "";
 
@@ -191,7 +190,6 @@ namespace HR3Weblinks.Examples
             // Initial token provided for General Access.   - this can be a provided key as well. 
             // The user can use a cmkey or a provided Key to login initially, typically a general access key.  (systemsetting windows gen'd one can work as well.)
 
-            //string lscmkey = "{9C638998-D441-478C-97BB-049794709CE1}";
             string lsNonce = "";
 
             var client = new HttpClient();
