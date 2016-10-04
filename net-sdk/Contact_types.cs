@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,7 +16,7 @@ using System.Runtime.Serialization;
 
 namespace HR3Weblinks.Examples
 {
-    
+
     public class Update_datedInfo
     {
         public DateTime? Update_Date { get; set; }
@@ -28,7 +28,22 @@ namespace HR3Weblinks.Examples
         public DateTime? Update_Date { get; set; }
     }
 
-    public class ContactTypeInfo 
+    public class PostResult
+    {
+        public PostResult() { }
+
+        public PostResult(string rmessage, int newId)
+        {
+            message = rmessage;
+            id = newId;
+        }
+
+        public string message { get; set; }
+        public int id { get; set; }
+    }
+
+
+    public class ContactTypeInfo
     {
         public ContactTypeInfo() { }
 
@@ -42,30 +57,35 @@ namespace HR3Weblinks.Examples
 
     public class Contact_types_class
     {
+        protected string fsContact_type_id;
+
+
         // Perform a connection to wsPing - just so we can see the REST service is up and running. 
         // wsPing does not require Authorisation access. 
         public void wsPingURL()
         {
-        
+
             using (var client = new HttpClient())
-            {  
+            {
                 client.BaseAddress = Helperfunctions.getURI();
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                HttpResponseMessage response = client.GetAsync("wsPing").Result;
+                HttpResponseMessage response = client.GetAsync("wsping").Result;
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
                     throw new Exception("/wsPing doesn't return expected value ");
+
                 }
 
                 // Test that the string = 'ping' was returned. 
                 string testObject = (string)response.Content.ReadAsAsync<string>().Result;
                 Console.WriteLine("wsPing() : " + testObject);
 
-                if (!(testObject.Contains("/Date")))  // should look at todays date!
+                // Test that we get Todays date. 
+                if (!(testObject.Contains(DateTime.Now.ToString("yyyy-MM-dd"))))  // should look at todays date!
                     throw new Exception("wsPing doesn't return expected value. " + testObject);
-            }
+            }        
         } // end wsPingURL
 
 
@@ -74,7 +94,7 @@ namespace HR3Weblinks.Examples
         {
 
             using (var client = new HttpClient())
-            {   
+            {
                 client.BaseAddress = Helperfunctions.getURI();
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -97,17 +117,17 @@ namespace HR3Weblinks.Examples
         public string getAuthoContact_types()
         {
             List<ContactTypeInfo> Items = null;
-            string lsSessiontoken; 
+            string lsSessiontoken;
 
             using (var client = new HttpClient())
-            {   
+            {
                 client.BaseAddress = Helperfunctions.getURI();
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 try
                 {
-                    lsSessiontoken = Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                    lsSessiontoken = Helperfunctions.RequestSessionToken(Common.Username, Common.Password, Common.DefaultAccessToken);
                 }
                 catch (System.Exception e)
                 {
@@ -118,14 +138,14 @@ namespace HR3Weblinks.Examples
                 // Header Details - software key 
                 client.DefaultRequestHeaders.Add("cmkey", lsSessiontoken);
                 // Who is the user of that is making the call. 
-                client.DefaultRequestHeaders.Add("username", Common.Username);
+                //01 client.DefaultRequestHeaders.Add("username", Common.Username);
                 // Both must be supplied otherwise call will fail with a 401. 
 
                 // Doc: Request a List of all the Contact types that are available. 
-                HttpResponseMessage response = client.GetAsync("ContactTypes/1").Result;
+                HttpResponseMessage response = client.GetAsync("ContactType").Result;
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    return "/ContactTypes doesn't return expected value ";
+                    return "/ContactType doesn't return expected value ";
                 }
 
                 var jsonString = response.Content.ReadAsStringAsync();
@@ -150,15 +170,16 @@ namespace HR3Weblinks.Examples
             List<ContactTypeInfo> Items = null;
 
             using (var client = new HttpClient())
-            {   
+            {
                 client.BaseAddress = Helperfunctions.getURI();
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 try
                 {
-                    if (Common.Instance().SessionToken == "") {
-                        Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                    if (Common.Instance().SessionToken == "")
+                    {
+                        Helperfunctions.RequestSessionToken(Common.Username, Common.Password, Common.DefaultAccessToken);
                     }
                     // if the token is not valid or expired an error will be raised,
                     // which inturn means we will need to asking for a new token. 
@@ -170,31 +191,31 @@ namespace HR3Weblinks.Examples
                 }
 
                 // Header Details - Session token
-                client.DefaultRequestHeaders.Add("cmkey", Common.Instance().SessionToken );
+                client.DefaultRequestHeaders.Add("cmkey", Common.Instance().SessionToken);
                 // Who is the user of that is making the call. 
-                client.DefaultRequestHeaders.Add("username", Common.Username);
+                //01client.DefaultRequestHeaders.Add("username", Common.Username);
                 // Both must be supplied otherwise call will fail with a 401. 
 
                 //Doc: Request a List of all the Contact types that are available. 
-                HttpResponseMessage response = client.GetAsync("ContactTypes/0").Result;
+                HttpResponseMessage response = client.GetAsync("contacttype/0").Result;
 
                 switch (response.StatusCode)
                 {
-                    case HttpStatusCode.NotFound :
+                    case HttpStatusCode.NotFound:
                         return "/Contact_types path failed with : 404 Not Found ";
-                    case HttpStatusCode.Forbidden :    //   AuthenticationFailed
+                    case HttpStatusCode.Forbidden:    //   AuthenticationFailed
                         // Sessiontoken possible failure  - attempt with a new one. 
                         Common.Instance().SessionToken = "";  // wipe session token 
-                        Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                        Helperfunctions.RequestSessionToken(Common.Username, Common.Password, Common.DefaultAccessToken);
 
-                        response = client.GetAsync("ContactTypes/0").Result;
+                        response = client.GetAsync("contacttype/0").Result;
                         break;
-                    case HttpStatusCode.OK :
+                    case HttpStatusCode.OK:
                         break; // Worked fine. 
                 }
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    return "/ContactTypes doesn't return expected value ";
+                    return "/contacttype doesn't return expected value ";
                 }
 
                 // Given the Json Returned - write out the return values
@@ -225,7 +246,7 @@ namespace HR3Weblinks.Examples
             {
                 if (Common.Instance().SessionToken == "")
                 {
-                    Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                    Helperfunctions.RequestSessionToken(Common.Username, Common.Password, Common.DefaultAccessToken);
                 }
                 // if the token is not valid or expired an error will be raised,
                 // which inturn means we will need to asking for a new token. 
@@ -237,34 +258,36 @@ namespace HR3Weblinks.Examples
             }
 
             var client = new HttpClient();
-            var request = new System.Net.Http.HttpRequestMessage() {
-                RequestUri = Helperfunctions.getURI("ContactTypes/1,3,4,5"), 
+            var request = new System.Net.Http.HttpRequestMessage()
+            {
+                RequestUri = Helperfunctions.getURI("contacttype/1,3,4,5"),
                 Method = HttpMethod.Get
             };
 
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             // Header Details - Session token
-            request.Headers.Add("cmkey", Common.Instance().SessionToken );
+            request.Headers.Add("cmkey", Common.Instance().SessionToken);
             // Who is the user of that is making the call. 
             request.Headers.Add("username", Common.Username);
 
             Console.WriteLine("getContacttypesAsync : Sending Asysnc");
-            var task = client.SendAsync(request).ContinueWith((taskwithmsg) => 
+            var task = client.SendAsync(request).ContinueWith((taskwithmsg) =>
             {
                 var response = taskwithmsg.Result;
 
-                if (response.StatusCode == HttpStatusCode.OK) {
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
                     var jsonString = response.Content.ReadAsStringAsync();
                     jsonString.Wait();
 
-                    try 
+                    try
                     {
                         Items = JsonConvert.DeserializeObject<List<ContactTypeInfo>>(jsonString.Result);
                         Console.WriteLine("getContacttypesAsync : " + jsonString.Result);
                         for (int i = 0; i < Items.Count; i++)
                         {
-                            Console.WriteLine("Item : "+Items[i].Contact_Type_Id + ", " + Items[i].Contact_Type_Desc );
+                            Console.WriteLine("Item : " + Items[i].Contact_Type_Id + ", " + Items[i].Contact_Type_Desc);
                         }
 
                     }
@@ -277,7 +300,7 @@ namespace HR3Weblinks.Examples
                 // else report errors 
 
             });
-        
+
             task.Wait();
             return lsResult;
 
@@ -295,7 +318,7 @@ namespace HR3Weblinks.Examples
             {
                 if (Common.Instance().SessionToken == "")
                 {
-                    Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                    Helperfunctions.RequestSessionToken(Common.Username, Common.Password, Common.DefaultAccessToken);
                 }
                 // if the token is not valid or expired an error will be raised,
                 // which inturn means we will need to asking for a new token. 
@@ -309,7 +332,7 @@ namespace HR3Weblinks.Examples
             var client = new HttpClient();
             var request = new System.Net.Http.HttpRequestMessage()
             {
-                RequestUri = Helperfunctions.getURI("ContactTypes/1"), 
+                RequestUri = Helperfunctions.getURI("contacttType/1"),
                 Method = HttpMethod.Get
             };
 
@@ -334,7 +357,7 @@ namespace HR3Weblinks.Examples
                     {
                         loItem = JsonConvert.DeserializeObject<ContactTypeInfo>(jsonString.Result);
                         Console.WriteLine("getaContacttypesAsync : " + jsonString.Result);
-                        Console.WriteLine("Item : " + loItem.Contact_Type_Id+ ", " + loItem.Contact_Type_Desc );
+                        Console.WriteLine("Item : " + loItem.Contact_Type_Id + ", " + loItem.Contact_Type_Desc);
 
                     }
                     catch (Exception ex)
@@ -350,18 +373,18 @@ namespace HR3Weblinks.Examples
                     switch (response.StatusCode)
                     {
                         case HttpStatusCode.NotFound:
-                            lsResult = lsResult + "Error : /ContactTypes/2 path failed with : 404 Not Found ";
+                            lsResult = lsResult + "Error : /contacttype/2 path failed with : 404 Not Found ";
                             break;
                         case HttpStatusCode.Forbidden:    //   AuthenticationFailed
                             // Sessiontoken possible failure  - attempt with a new one. 
                             lsResult = lsResult + "Error : AuthenticationFailed.";
                             break;
-                        default :
+                        default:
                             lsResult = lsResult + string.Format("Error Message:{0}", response.StatusCode);
                             break; // Worked fine. 
                     }
                 }
-                
+
 
             });
 
@@ -373,59 +396,55 @@ namespace HR3Weblinks.Examples
 
         public string insContact_type()
         {
-            //Dictionary<string, string> args = new Dictionary<string, string>();
-            ContactTypeInfo loType01 = new ContactTypeInfo() { Contact_Type_Id = 0, Contact_Type_Desc = "Serialized type", Update_Date = null };
-
-            string str = JsonConvert.SerializeObject(loType01);
-
-            string targetUri = Helperfunctions.getURI("ContactTypes").ToString(); // "http://localhost:64398/Hr3RestService/contacts/datasource?format=json";
-            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(targetUri);
-
-            request.ContentType = "application/json; charset=utf-8";
-            request.Method = "POST";
-            // Header Details - Session token
-            request.Headers.Add("cmkey", Common.Instance().SessionToken);
-            // Who is the user of that is making the call. 
-            request.Headers.Add("username", Common.Username);
-
-            using (System.IO.Stream writer = request.GetRequestStream())
-            {
-                byte[] data = Encoding.UTF8.GetBytes(str);
-                writer.Write(data, 0, data.Length);
-
-                //request.
-                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                {
-                    using (System.IO.StreamReader reader = new System.IO.StreamReader(response.GetResponseStream()))
-                    {
-                        string tResponse = reader.ReadToEnd();
-                        Console.WriteLine(tResponse);
-                    }
-                }
-            }
-
-            return "";
-
-        }
-
-        // insContact_typesAsync() returns an error 
-        // todo: finish this off. 
-        public async Task<string> insContact_typesAsync()
-        {
-            // Use the service with the software GUID        
-            PKandUpdateDate loResult = null;
+            ContactTypeInfo loItem = new ContactTypeInfo() 
+            { 
+                Contact_Type_Id = 0, 
+                Contact_Type_Desc = "Serialized type", 
+                Update_Date = null 
+            };
 
             string lsResult = "";
+            fsContact_type_id = "";
             // id will be assigned and returned  
-
             try
             {
-                if (Common.Instance().SessionToken == "")
+                HttpResponseMessage response = Common.RequestaPOSTClient("ContactType", loItem);
+                if (response != null)
                 {
-                    Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine("Insert Contact type : Ok");
+
+                        var jsonString = response.Content.ReadAsStringAsync();
+                        jsonString.Wait();
+
+                        PKandUpdateDate loResult = JsonConvert.DeserializeObject<PKandUpdateDate>(jsonString.Result);
+
+                        Console.WriteLine("Insert Contact type : " + jsonString.Result);
+                        Console.WriteLine("Insert Contact type : id= " + loResult.ID.ToString() + " - Message= " + loResult.ToString());
+
+                        fsContact_type_id = loResult.ID.ToString();
+
+                    }
+                    else
+                    {
+                        switch (response.StatusCode)
+                        {
+                            case HttpStatusCode.BadRequest:
+                                // Error has occured read the message
+                                var jsonString = response.Content.ReadAsStringAsync();
+                                jsonString.Wait();
+
+                                // Read the result we want to read the message as to what went wrong. 
+                                PostResult loResult = JsonConvert.DeserializeObject<PostResult>(jsonString.Result);
+                                return string.Format("Insert contact type : Returned a Badrequest Message {0} ", loResult.message);
+                            default:
+                                return string.Format("Insert contact type : Returned a Status of {0}", response.StatusCode); // Worked fine.                     
+                        }
+                        // throw new Exception(asUri + string.Format(" doesn't return expected value. Returned a Status of {0} ",response.StatusCode) );
+
+                    }
                 }
-                // if the token is not valid or expired an error will be raised,
-                // which inturn means we will need to asking for a new token. 
             }
             catch (System.Exception e)
             {
@@ -433,165 +452,11 @@ namespace HR3Weblinks.Examples
                 return string.Format("Error Message:{0}", e.Message);
             }
 
-            ContactTypeInfo loType01 = new ContactTypeInfo() { Contact_Type_Id = 0, Contact_Type_Desc = "Async type", Update_Date = null};
-
-            var client = new HttpClient();
-            var request = new System.Net.Http.HttpRequestMessage()
-            {
-                RequestUri = Helperfunctions.getURI("ContactTypes"),
-                
-                Method = HttpMethod.Post
-            };
-
-            // Setup Headers
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            // Header Details - Session token
-            client.DefaultRequestHeaders.Add("cmkey", Common.Instance().SessionToken);
-            // Who is the user of that is making the call. 
-            client.DefaultRequestHeaders.Add("username", Common.Username);
-
-            Console.WriteLine("insContacttypesAsync : Sending Asysnc");
-            
-            var response = await client.PostAsJsonAsync(request.RequestUri, loType01);
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                // Read the response back as we may want the PK that was assigned to it. 
-                // Now transpose the Results. 
-                var jsonString = response.Content.ReadAsStringAsync();
-                jsonString.Wait();
-
-                try
-                {
-                    loResult = JsonConvert.DeserializeObject<PKandUpdateDate>(jsonString.Result);
-                    Console.WriteLine("insContacttypesAsync : " + jsonString.Result);
-                    Console.WriteLine("insContacttypesAsync : id= " + loResult.ID.ToString() + " - Update Date = "+loResult.Update_Date.ToString());
-                }
-                catch (Exception ex)
-                {
-                    lsResult = "Error : " + ex.Message;
-                }
-            }
-            else
-            {
-                switch (response.StatusCode)
-                {
-                    case HttpStatusCode.NotFound:
-                        lsResult = lsResult + "Error : /ContactTypes path failed with : 404 Not Found ";
-                        break;
-                    case HttpStatusCode.Forbidden:    //   AuthenticationFailed
-                        // Sessiontoken possible failure  - attempt with a new one. 
-                        lsResult = lsResult + "Error : AuthenticationFailed.";
-                        break;
-                    default:
-                        lsResult = lsResult + string.Format("Error Message:{0}", response.StatusCode);
-                        break; // Worked fine. 
-                }
-            }
-            
-            return lsResult;
-        }
-
-        // Posts a series of Records via Async into the service. 
-        public string insContact_typesAsync02()
-        {
-            // Use the service with the software GUID        
-            List<ContactTypeInfo> loItems = new List<ContactTypeInfo>();
-            ContactTypeInfo loItem = null;
-
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Eleven" }  );
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Twelve" });
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Thirteen" });
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Fourteen" }  );
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Fifthteen" }  );
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Sixteen" }  );
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Seventeen" }  );
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Eightteen" }  );
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Nineteen" }  );
-            loItems.Add( new ContactTypeInfo { Contact_Type_Desc = "Twenty" }  );
-
-            PKandUpdateDate loResult = null;
-
-            string lsResult = "";
-            // id will be assigned and returned  
-
-            var client = new HttpClient();
-            var request = new System.Net.Http.HttpRequestMessage()
-            {
-                RequestUri = Helperfunctions.getURI("ContactTypes"), 
-
-                Method = HttpMethod.Post
-            };
-
-            // Setup Headers
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            // Header Details - Session token
-            client.DefaultRequestHeaders.Add("cmkey", Common.Instance().SessionToken);
-            // Who is the user of that is making the call. 
-            client.DefaultRequestHeaders.Add("username", Common.Username);
-
-            Console.WriteLine("insContacttypesAsync : Sending Asysnc");
-            // todo: fire off a series of insert calls. 
-
-            // todo: loItems.AsParallel comeback to this later. 
-
-            while (loItems.Count > 0) 
-            {
-                loItem = loItems[0];
-                loItems.Remove(loItem);
-
-                var task = client.PostAsJsonAsync(request.RequestUri, loItem).ContinueWith((taskwithmsg) =>
-                {
-                    var response = taskwithmsg.Result;
-                    if (response.StatusCode != HttpStatusCode.OK)
-                    {
-                        // We now need to read the response back as we may want the PK that was assigned to it. 
-                        // Now transpose the Results. 
-                        var jsonString = response.Content.ReadAsStringAsync();
-                        jsonString.Wait();
-
-                        // if we provide an incorrect URL lets make sure that the code handles itself correctly. 
-                        try
-                        {
-                            loResult = JsonConvert.DeserializeObject<PKandUpdateDate>(jsonString.Result);
-                            Console.WriteLine("insContacttypesAsync : " + jsonString.Result);
-                            Console.WriteLine("insContacttypesAsync : id= " + loResult.ID.ToString() + " - Message= " + loResult.ToString());
-
-                            // I need to know the format for what hr3rest will be posting back or will it be in a header. 
-                        }
-                        catch (Exception ex)
-                        {
-                            lsResult = "Error : " + ex.Message;
-                        }
-                    }
-                    else
-                    {
-                        switch (response.StatusCode)
-                        {
-                            case HttpStatusCode.NotFound:
-                                lsResult = lsResult + "Error : /ContactType path failed with : 404 Not Found ";
-                                break;
-                            case HttpStatusCode.Forbidden:    //   AuthenticationFailed
-                                // Sessiontoken possible failure  - attempt with a new one. 
-                                lsResult = lsResult + "Error : AuthenticationFailed.";
-                                break;
-                            default:
-                                lsResult = lsResult + string.Format("Error Message:{0}", response.StatusCode);
-                                break; // Worked fine. 
-                        }
-                    }
-
-
-                });
-
-            };
-
-            // task.Wait();  // wait on the last task ??
             return lsResult;
 
         }
 
+        
 
         // The Problem with this is we need to find an Existing Item then update rather than just perform an update. 
         public string updContact_typesAsync()
@@ -600,11 +465,15 @@ namespace HR3Weblinks.Examples
 
             string lsResult = "";
 
+            if (fsContact_type_id == "") {
+                return "Error Message: Contact_type 14 id is not available.";
+            }
+
             try
             {
                 if (Common.Instance().SessionToken == "")
                 {
-                    Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                    Helperfunctions.RequestSessionToken(Common.Username, Common.Password, Common.DefaultAccessToken);
                 }
             }
             catch (System.Exception e)
@@ -615,12 +484,12 @@ namespace HR3Weblinks.Examples
 
             // id will be assigned and returned  
             // TODO: This needs to be rechecked as PK(9) is not acceptable. 
-            ContactTypeInfo loItem01 = new ContactTypeInfo() { Contact_Type_Id = 17, Contact_Type_Desc = "Seventeen is 17" };
+            ContactTypeInfo loItem01 = new ContactTypeInfo() { Contact_Type_Id = Int32.Parse(fsContact_type_id), Contact_Type_Desc = "Type is" };
 
             var client = new HttpClient();
             var request = new System.Net.Http.HttpRequestMessage()
             {
-                RequestUri = Helperfunctions.getURI("ContactTypes/"+loItem01.Contact_Type_Id.ToString()),  
+                RequestUri = Helperfunctions.getURI("ContactType"),
                 Method = HttpMethod.Put
             };
 
@@ -663,7 +532,7 @@ namespace HR3Weblinks.Examples
                     switch (response.StatusCode)
                     {
                         case HttpStatusCode.NotFound:
-                            lsResult = lsResult + "Error : /ContactTypes/2 path failed with : 404 Not Found ";
+                            lsResult = lsResult + "Error : /contacttype/2 path failed with : 404 Not Found ";
                             break;
                         case HttpStatusCode.Forbidden:    //   AuthenticationFailed
                             // Sessiontoken possible failure  - attempt with a new one. 
@@ -683,21 +552,46 @@ namespace HR3Weblinks.Examples
         }
 
 
-        // updContact_typesAsync() returns an error 
+        // delContact_typesAsync() returns an error 
+        /// <summary>
+        ///  Delete any of the fsCTXX_id vars that have been set. 
+        ///  
+        /// </summary>
+        /// <returns></returns>
         public string delContact_typesAsync()
         {
+            string lsError = "";
+
+            if (fsContact_type_id != "") {
+                lsError = delContact_typesEach(fsContact_type_id);
+            }
+            
+            return lsError;
+        }
+
+        public string delContact_typesEach(string Value)
+        {
             // Use the service with the software GUID        
-            //List<Ranges> Items = null;
             string lsResult = "";
+
+            // To perform a Delete we need to know what record we are deleting. 
+            // Insert has put aside the PK that we created earlier. 
+            Console.WriteLine("Delete Contact type : Attempting ");
 
             try
             {
-                if (Common.Instance().SessionToken == "")
+                // DELETE /api/v1-0/contact/{contactId}/phones/{contactPhoneId}
+                HttpResponseMessage response = Common.RequestaDeleteClient(string.Format("contacttype/{0}", Value));
+                if (response != null)
                 {
-                    Helperfunctions.RequestSessionToken(Common.Email, Common.Password, Common.DefaultAccessToken);
+                    var jsonString = response.Content.ReadAsStringAsync();
+                    jsonString.Wait();
+
+                    PostResult loResult = JsonConvert.DeserializeObject<PostResult>(jsonString.Result);
+
+                    Console.WriteLine("Delete Contact type : " + jsonString.Result);
+                    Console.WriteLine("Delete Contact type : id= " + loResult.id.ToString() + " - Message= " + loResult.message);
                 }
-                // if the token is not valid or expired an error will be raised,
-                // which inturn means we will need to asking for a new token. 
             }
             catch (System.Exception e)
             {
@@ -705,72 +599,165 @@ namespace HR3Weblinks.Examples
                 return string.Format("Error Message:{0}", e.Message);
             }
 
-            // id will be assigned and returned  
-            ContactTypeInfo loItem02 = new ContactTypeInfo() { Contact_Type_Id = 18 };
+            return "";
+
+        }
+
+
+        // call is contact_type
+        /*
+         * The call is to request what is the lastest timestamp of the last modify record that is stored for this record type.
+         *
+         * Scenario, I have the timestamp of 2012-11-25 06:00(ldtLastupdated) stored from the last time I performed a sync process.
+         * Make the call.
+         * ie:  contact_types/update_date   
+         *  Returns the value "2012-12-20 06:30"
+         *  if ldtLastupdated = "2012-12-20 06:30"
+         *     Nothing to update
+         *  else
+         *     // call to get a filtered list based on updated date.
+         *     Contacttype/updateddata?lastUpdatedDt=2012-11-25
+
+         *     // Now update or ammend new records.
+         *
+        */
+        public string get_Contact_type_update_date()
+        {
+            // Use the service with the software GUID       
+            Update_datedInfo loItem = null;
+            string lsResult = "";
+
+            // Assuming Australian DD-MM-YYYY
+            System.Globalization.CultureInfo culture = new System.Globalization.CultureInfo("en-AU", true);
+            culture.DateTimeFormat.ShortDatePattern = "dd/MM/yyyy";
+            DateTime ldtLastUpdated = Convert.ToDateTime("25/11/2012", culture);
 
             var client = new HttpClient();
             var request = new System.Net.Http.HttpRequestMessage()
             {
-                RequestUri = Helperfunctions.getURI("ContactTypes/"+loItem02.Contact_Type_Id.ToString()),  
-
-                Method = HttpMethod.Delete
+                RequestUri = Helperfunctions.getURI("contacttype/update_date"),
+                Method = HttpMethod.Get
             };
+            // /Hr3RestService/getContacttype/1
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            // Setup Headers
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             // Header Details - Session token
-            client.DefaultRequestHeaders.Add("cmkey", Common.Instance().SessionToken);
-            // Who is the user of that is making the call. 
-            client.DefaultRequestHeaders.Add("username", Common.Username);
+            request.Headers.Add("cmkey", Common.Instance().SessionToken);
+            // Who is the user of that is making the call.
+            request.Headers.Add("username", Common.Username);
 
-            Console.WriteLine("delContacttypesAsync : Sending Asysnc");
-            // todo: fire off a series of insert calls. 
-
-            // Ok there is a couple ways of posting data I just need the items placed into Content. 
-            var task = client.DeleteAsync(request.RequestUri).ContinueWith((taskwithmsg) =>
+            Console.WriteLine("Contact type : Sending Asysnc");
+            var task = client.SendAsync(request).ContinueWith((taskwithmsg) =>
             {
                 var response = taskwithmsg.Result;
-                if (response.StatusCode == HttpStatusCode.OK)
+
+                if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    // We now need to read the response back as we may want the PK that was assigned to it. 
                     var jsonString = response.Content.ReadAsStringAsync();
                     jsonString.Wait();
 
+                    // if we provide an incorrect URL lets make sure that the code handles itself correctly.
                     try
                     {
-                        lsResult = JsonConvert.DeserializeObject<string>(jsonString.Result);
-                        Console.WriteLine("delContacttypesAsync : " + lsResult);
-                        lsResult = "";
-                        //Console.WriteLine("delContacttypesAsync : id= " + loResult.Id.ToString() + " - Message= " + loResult.Message);
+
+                        loItem = JsonConvert.DeserializeObject<Update_datedInfo>(jsonString.Result);
+
+                        if (loItem.Update_Date >= ldtLastUpdated)
+                        {
+                            // No nothing
+                        }
+                        else
+                        {
+                            // call to get a filtered list based on updated date.
+                            get_Contact_type_on(loItem.Update_Date);
+                            // Now update or ammend new records.
+                        }
+
+                        //loItem = JsonConvert.DeserializeObject<ContactTypeInfo>(jsonString.Result);
+                        //Console.WriteLine("Contact_types : " + jsonString.Result);
+                        //Console.WriteLine("Item : " + loItem.Contact_Type_Id.ToString() + ", " + loItem.Contact_Type_Desc);
+
                     }
                     catch (Exception ex)
                     {
+                        //Console.WriteLine("Error reading converting json data " + ex.Message);
                         lsResult = "Error : " + ex.Message;
                     }
-                }
-                else
-                {
-                    switch (response.StatusCode)
-                    {
-                        case HttpStatusCode.NotFound:
-                            lsResult = lsResult + "Error : /ContactTypes/ path failed with : 404 Not Found ";
-                            break;
-                        case HttpStatusCode.Forbidden:    //   AuthenticationFailed
-                            // Sessiontoken possible failure  - attempt with a new one. 
-                            lsResult = lsResult + "Error : AuthenticationFailed.";
-                            break;
-                        default:
-                            lsResult = lsResult + string.Format("Error Message:{0}", response.StatusCode);
-                            break; // Worked fine. 
-                    }
+
                 }
 
             });
 
             task.Wait();
             return lsResult;
+        }
 
+        // GET_Contact_type_on(
+        public string get_Contact_type_on(DateTime? adtLastUpdated)
+        {
+            //     // call to get a filtered list based on updated date.
+            //     contact_types?sort=update_date&update>=2012-11-25
+            //     // Now update or ammend new records.
+            // Use the service with the software GUID       
+            List<ContactTypeInfo> Items = null;
+
+            string lsResult = "";
+            string lsURL = "";
+
+
+            // Pass in a format that the REST would like.  Json IS08601 Format? 
+            // Datetime can be accepted a number of formats but I am going to do iso8601 format.
+
+            // GET /api/v1-0/contacttype/updateddata
+            lsURL = String.Format("Contacttype/updateddata?lastUpdatedDt={0:yyyy-MM-ddTHH:mm} ", adtLastUpdated);
+            var client = new HttpClient();
+            var request = new System.Net.Http.HttpRequestMessage()
+            {
+                RequestUri = Helperfunctions.getURI(lsURL),
+                Method = HttpMethod.Get
+            };
+            // /Hr3RestService/getcontacttype/1
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            // Header Details - Session token
+            request.Headers.Add("cmkey", Common.Instance().SessionToken);
+            // Who is the user of that is making the call.
+            request.Headers.Add("username", Common.Username);
+
+            Console.WriteLine("Contact_types : Sending Asysnc");
+            var task = client.SendAsync(request).ContinueWith((taskwithmsg) =>
+            {
+                var response = taskwithmsg.Result;
+
+                if (response.StatusCode != HttpStatusCode.OK)
+                {
+                    var jsonString = response.Content.ReadAsStringAsync();
+                    jsonString.Wait();
+
+                    // if we provide an incorrect URL lets make sure that the code handles itself correctly.
+                    try
+                    {
+                        Items = JsonConvert.DeserializeObject<List<ContactTypeInfo>>(jsonString.Result);
+                        Console.WriteLine("Contact_types : " + jsonString.Result);
+                        for (int i = 0; i < Items.Count; i++)
+                        {
+                            Console.WriteLine("Item : " + Items[i].Contact_Type_Id.ToString() + ", " + Items[i].Contact_Type_Desc);
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error reading converting json data " + ex.Message);
+                        lsResult = "Error : " + ex.Message;
+                    }
+
+                }
+
+            });
+
+            task.Wait();
+
+            return lsResult;
         }
 
 
